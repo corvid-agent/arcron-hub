@@ -1,9 +1,14 @@
-/* ARCRON HUB — live observer + onboarding hub for the Arcron keeper network.
-   Reads upkeep boxes straight from keeper app 769891898 on Algorand TestNet.
-   Live algod fetch first, snapshot.json fallback. Read-only. No wallet. */
+/* ARCRON HUB v2 — live observer + onboarding hub for the Arcron keeper network.
+   Reads upkeep boxes straight from keeper app 769891898 on Algorand TestNet,
+   live global state from the corvid-agent fleet (plod / waddle / arcron-beacon /
+   epitaph), the arcron pulse app 769891902, and RainRec boxes from rain hub
+   770130162. Live fetch first, snapshot.json fallback. Read-only. No wallet. */
 (() => {
   const KEEPER = 769891898;
+  const PULSE = 769891902;
+  const RAIN_HUB = 770130162;
   const ALGOD = "https://testnet-api.algonode.cloud";
+  const INDEXER = "https://testnet-idx.algonode.cloud";
   const EXPLORER = "https://testnet.explorer.perawallet.app/application/";
   const REFRESH_MS = 30000;
   const ROUND_MS = 2800; // ~2.8s per round
@@ -15,7 +20,17 @@
     770734249: "plod",
     770742373: "waddle",
     770742777: "arcron-beacon",
+    770748282: "epitaph",
   };
+
+  const FLEET_APPS = [
+    { key: "plod", id: 770734249, name: "PLOD", repo: "https://github.com/corvid-agent/plod" },
+    { key: "waddle", id: 770742373, name: "WADDLE", repo: "https://github.com/corvid-agent/waddle" },
+    { key: "beacon", id: 770742777, name: "ARCRON-BEACON", repo: "https://github.com/corvid-agent/arcron-beacon" },
+    { key: "epitaph", id: 770748282, name: "EPITAPH", repo: "https://github.com/corvid-agent/epitaph" },
+  ];
+
+  const PULSE_KNOWN = ["beats", "last_beat_round", "last_note"];
 
   /* ---- SHA-512/256 + Algorand address encoding (from corvid-agent/arrivals) ---- */
   const MASK = (1n << 64n) - 1n;
@@ -119,6 +134,22 @@
     return out;
   }
 
+  function bytesToHex(bytes) {
+    let out = "";
+    for (const b of bytes) out += b.toString(16).padStart(2, "0");
+    return out;
+  }
+
+  function bytesToText(bytes) {
+    if (!bytes.length) return null;
+    let out = "";
+    for (const b of bytes) {
+      if (b < 32 || b >= 127) return null;
+      out += String.fromCharCode(b);
+    }
+    return out;
+  }
+
   function u64(dv, off) {
     return Number(dv.getBigUint64(off));
   }
@@ -147,6 +178,206 @@
       fee: u64(dv, 58),
       balance: u64(dv, 66),
       policy: u64(dv, 82),
+    };
+  }
+
+  /* ---- app global-state decoding ----
+     Global-state entries are base64 key/value; uint type=2, bytes type=1. */
+  function decodeGlobalState(params) {
+    const state = {};
+    const kvs = (params && params["global-state"]) || [];
+    for (const kv of kvs) {
+      const keyBytes = b64ToBytes(kv.key);
+      const key = bytesToText(keyBytes) || "0x" + bytesToHex(keyBytes);
+      const v = kv.value || {};
+      if (v.type === 2) {
+        state[key] = { type: "uint", uint: v.uint };
+      } else {
+        const raw = b64ToBytes(v.bytes || "");
+        state[key] = { type: "bytes", hex: bytesToHex(raw), text: bytesToText(raw) };
+      }
+    }
+    return state;
+  }
+
+  function stateUint(state, key) {
+    const e = state[key];
+    return e && e.type === "uint" ? e.uint : null;
+  }
+
+  /* ---- RainRec decoding (ported from corvid-agent/arrivals docs/app.js) ----
+     Layout VERIFIED against the rain contract source:
+     CorvidLabs/arcron smart_contracts/rain/contract.py @ ea83b069.
+     Box "r" || itob(id), 224 bytes, ARC-4 struct, big-endian, tightly packed:
+       0  creator address (32B)        128  pot u64
+      32  gate_creator address (32B)   136  tickets u64
+      64  label byte[32] zero-padded   144  draw_id u64
+      96  prize_asset u64              152  cumulative u64
+     104  drip u64                     160  mode u64 (0 SPLIT, 1 ONE, 2 WAVE)
+     112  interval_rounds u64          168  wave_cap u64
+     120  last_rain_round u64          208  commit_round u64 · 216 prize_locked u64
+     ONE lifecycle: draw locks `drip` at fire and sets
+     commit_round = fire_round + COMMIT_DELAY (8); resolve is valid for
+     commit_round < round <= commit_round + SEED_WINDOW (800); past that
+     abandon returns the lock to the pot. resolve/abandon both reset
+     prize_locked and commit_round to 0, so a settled draw reads as
+     "no draw open". SPLIT/WAVE have no resolve window. */
+  const RAIN_COMMIT_DELAY = 8;
+  const RAIN_SEED_WINDOW = 800;
+  const RAIN_MODES = ["SPLIT", "ONE", "WAVE"];
+
+  function rainBoxIdFromName(b64name) {
+    const raw = b64ToBytes(b64name);
+    if (raw.length !== 9 || raw[0] !== 0x72) return null;
+    const dv = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+    return u64(dv, 1);
+  }
+
+  function decodeRain(id, bytes) {
+    if (bytes.length < 224) throw new Error("short rain " + id);
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let end = 64;
+    while (end < 96 && bytes[end] !== 0) end++;
+    let name = "";
+    for (let i = 64; i < end; i++) {
+      const c = bytes[i];
+      name += c >= 32 && c < 127 ? String.fromCharCode(c) : " ";
+    }
+    return {
+      id,
+      name: name.trim() || "rain " + id,
+      prize_asset: u64(dv, 96),
+      drip: u64(dv, 104),
+      interval_rounds: u64(dv, 112),
+      last_rain_round: u64(dv, 120),
+      pot: u64(dv, 128),
+      tickets: u64(dv, 136),
+      draw_id: u64(dv, 144),
+      mode: u64(dv, 160),
+      wave_cap: u64(dv, 168),
+      commit_round: u64(dv, 208),
+      prize_locked: u64(dv, 216),
+    };
+  }
+
+  function rainModeLabel(mode) {
+    return RAIN_MODES[mode] || "MODE " + mode;
+  }
+
+  // Real resolve-window status from the verified fields above.
+  function rainWindow(r, round) {
+    const mode = rainModeLabel(r.mode);
+    if (r.mode !== 1) {
+      if (r.mode !== 0 && r.mode !== 2) {
+        return { text: "MODE " + r.mode, sub: "unknown", cls: "unknown", title: "unrecognized mode u64 at r-box offset 160" };
+      }
+      return {
+        text: r.mode === 2 ? "GM WAVE" : "AUTO-SPLIT",
+        sub: "no window",
+        cls: "ontime",
+        title: mode + " rain · fires split the drip automatically · no resolve window in the contract",
+      };
+    }
+    const lockNote = "draw " + r.draw_id + " · locked " + r.prize_locked + " µ units · commit round " + r.commit_round;
+    if (!r.prize_locked) {
+      const due = r.last_rain_round + r.interval_rounds;
+      const isDue = round != null && round >= due;
+      return {
+        text: "WAITING DRAW",
+        sub: round != null ? (isDue ? "draw due" : "in " + (due - round) + "r") : "due " + due,
+        cls: isDue ? "delayed" : "ontime",
+        title: "ONE rain · no draw open · next fire due round " + due,
+      };
+    }
+    const resolveBy = r.commit_round + RAIN_SEED_WINDOW;
+    if (round == null) {
+      return { text: "DRAW OPEN", sub: "by " + resolveBy, cls: "delayed", title: lockNote + " · resolve by round " + resolveBy };
+    }
+    if (round <= r.commit_round) {
+      return {
+        text: "SEED LOCK",
+        sub: "T-" + (r.commit_round - round) + "r",
+        cls: "delayed",
+        title: lockNote + " (fire + " + RAIN_COMMIT_DELAY + ") · seed not readable until the commit round passes",
+      };
+    }
+    if (round <= resolveBy) {
+      const left = resolveBy - round;
+      return {
+        text: "RESOLVE",
+        sub: left + "r left",
+        cls: left < 200 ? "delayed" : "ontime",
+        title: lockNote + " · resolve by round " + resolveBy + " (commit + " + RAIN_SEED_WINDOW + ") · " + left + "r left",
+      };
+    }
+    return {
+      text: "MISSED",
+      sub: "abandonable",
+      cls: "grounded",
+      title: lockNote + " · seed window closed at round " + resolveBy + " · abandon() now returns the lock to the pot",
+    };
+  }
+
+  /* ---- fleet live-status derivations ---- */
+  // arcron-beacon alternates PLAN (set target_round = round + delay_rounds)
+  // and REVEAL (reveal the committed seed once target_round passes).
+  function beaconPhase(st, round) {
+    const target = stateUint(st, "target_round");
+    const revealed = stateUint(st, "revealed_round") || 0;
+    const delay = stateUint(st, "delay_rounds");
+    if (target == null) {
+      return { text: "NO PLAN", sub: "no target set", cls: "unknown", title: "target_round key missing from beacon global state" };
+    }
+    if (target > 0 && revealed >= target) {
+      return {
+        text: "PLAN",
+        sub: "next target pending",
+        cls: "ontime",
+        title: "beacon revealed round " + revealed + " · waiting to plan the next commit (delay " + delay + "r)",
+      };
+    }
+    const left = round != null ? target - round : null;
+    return {
+      text: "REVEAL",
+      sub: left != null ? (left > 0 ? "T-" + left + "r" : "DUE NOW") : "target " + target,
+      cls: left != null && left <= 0 ? "delayed" : "ontime",
+      title: "commit-reveal in flight · reveal valid once round passes target " + target +
+        (delay != null ? " (delay " + delay + "r)" : "") + " · last reveal " + revealed,
+    };
+  }
+
+  // epitaph dead-man's switch: PUBLISHED once the payload is out; otherwise
+  // ARMED until last_checkin_round + timeout_rounds, EXPIRED past it.
+  function epitaphState(st, round) {
+    const published = stateUint(st, "published") || 0;
+    const timeout = stateUint(st, "timeout_rounds");
+    const checkin = stateUint(st, "last_checkin_round");
+    if (published) {
+      const rr = stateUint(st, "revealed_round");
+      return {
+        text: "PUBLISHED",
+        sub: rr ? "revealed round " + rr : "payload out",
+        cls: "ontime",
+        title: "published flag set · the epitaph payload has been released",
+      };
+    }
+    if (timeout == null || checkin == null) {
+      return { text: "UNKNOWN", sub: "missing keys", cls: "unknown", title: "timeout_rounds / last_checkin_round missing from global state" };
+    }
+    const deadline = checkin + timeout;
+    if (round != null && round > deadline) {
+      return {
+        text: "EXPIRED",
+        sub: "deadline " + deadline,
+        cls: "grounded",
+        title: "no check-in since round " + checkin + " · timeout " + timeout + "r passed at round " + deadline + " · anyone may publish",
+      };
+    }
+    return {
+      text: "ARMED",
+      sub: round != null ? "deadline in " + (deadline - round) + "r" : "deadline " + deadline,
+      cls: "delayed",
+      title: "last check-in round " + checkin + " + timeout " + timeout + "r · publishes if no check-in by round " + deadline,
     };
   }
 
@@ -209,6 +440,23 @@
     return res.json();
   }
 
+  async function listBoxes(appId) {
+    const boxes = [];
+    let url = INDEXER + "/v2/applications/" + appId + "/boxes";
+    for (let i = 0; i < 20; i++) {
+      const page = await fetchJson(url);
+      for (const b of page.boxes || []) boxes.push(b.name);
+      if (!page["next-token"]) break;
+      url = INDEXER + "/v2/applications/" + appId + "/boxes?next=" + encodeURIComponent(page["next-token"]);
+    }
+    return boxes;
+  }
+
+  async function fetchAppState(appId) {
+    const app = await fetchJson(INDEXER + "/v2/applications/" + appId);
+    return decodeGlobalState(app.application && app.application.params);
+  }
+
   async function fetchLive() {
     const status = await fetchJson(ALGOD + "/v2/status");
     const last_round = status["last-round"];
@@ -244,6 +492,66 @@
     };
   }
 
+  /* ---- fleet status feed ---- */
+  async function fetchFleetLive() {
+    const status = await fetchJson(ALGOD + "/v2/status");
+    const entries = {};
+    await Promise.all(FLEET_APPS.map(async (f) => {
+      entries[f.key] = await fetchAppState(f.id);
+    }));
+    return { mode: "live", last_round: status["last-round"], entries };
+  }
+
+  async function fetchFleetSnapshot() {
+    const snap = await fetchJson("snapshot.json");
+    if (!snap.fleet) return null;
+    return { mode: "fallback", last_round: snap.last_round, entries: snap.fleet };
+  }
+
+  /* ---- pulse feed ---- */
+  async function fetchPulseLive() {
+    const status = await fetchJson(ALGOD + "/v2/status");
+    const state = await fetchAppState(PULSE);
+    return { mode: "live", last_round: status["last-round"], state };
+  }
+
+  async function fetchPulseSnapshot() {
+    const snap = await fetchJson("snapshot.json");
+    if (!snap.pulse) return null;
+    return { mode: "fallback", last_round: snap.last_round, state: snap.pulse };
+  }
+
+  /* ---- rain feed ---- */
+  async function fetchRainLive() {
+    const status = await fetchJson(ALGOD + "/v2/status");
+    const last_round = status["last-round"];
+    const hub = await fetchAppState(RAIN_HUB);
+    const names = await listBoxes(RAIN_HUB);
+    const rains = await Promise.all(names.map(async (name) => {
+      const id = rainBoxIdFromName(name);
+      if (id == null) return null;
+      const box = await fetchJson(INDEXER + "/v2/applications/" + RAIN_HUB + "/box?name=b64:" + encodeURIComponent(name));
+      return decodeRain(id, b64ToBytes(box.value));
+    }));
+    return {
+      hub,
+      rains: rains.filter(Boolean).sort((a, b) => a.id - b.id),
+      last_round,
+      mode: "live",
+    };
+  }
+
+  async function fetchRainSnapshot() {
+    const snap = await fetchJson("snapshot.json");
+    if (!snap.rain || !Array.isArray(snap.rain.rains)) return null;
+    return {
+      hub: snap.rain.hub || {},
+      rains: snap.rain.rains,
+      last_round: snap.last_round,
+      mode: "fallback",
+    };
+  }
+
   /* ---- rendering ---- */
   let frame = null;
 
@@ -252,6 +560,14 @@
     if (!frame) return null;
     if (frame.mode !== "live" || frame.fetched_at == null) return frame.last_round;
     return frame.last_round + Math.floor((Date.now() - frame.fetched_at) / ROUND_MS);
+  }
+
+  // Round source for the secondary feeds: prefer the main board's live clock,
+  // fall back to the feed's own last_round (snapshot or live fetch).
+  function feedRound(feedFrame) {
+    const r = estimatedRound();
+    if (r != null) return r;
+    return feedFrame && feedFrame.last_round != null ? feedFrame.last_round : null;
   }
 
   function setMode(mode, note) {
@@ -272,6 +588,29 @@
     if (p === 1) return { text: "SKIP AHEAD", cls: "skip", title: "policy 1 · skips missed intervals, next fire is always in the future · healthy" };
     if (p === 0) return { text: "CATCH UP", cls: "catchup", title: "policy 0 · replays every missed interval · the trap: one due upkeep can demand many back-to-back executions" };
     return { text: "POL " + p, cls: "unknown", title: "unrecognized policy u64 at offset 82" };
+  }
+
+  function kvRow(label, value, title) {
+    const row = document.createElement("div");
+    row.className = "kv-row";
+    const k = document.createElement("span");
+    k.className = "kv-k";
+    k.textContent = label;
+    const v = document.createElement("span");
+    v.className = "kv-v crt-num";
+    if (title) v.title = title;
+    if (value instanceof Node) v.appendChild(value);
+    else v.textContent = value;
+    row.append(k, v);
+    return row;
+  }
+
+  function statusTag(w) {
+    const tag = document.createElement("div");
+    tag.className = "status-tag " + w.cls;
+    tag.title = w.title || "";
+    tag.textContent = w.text;
+    return tag;
   }
 
   function render(f) {
@@ -368,7 +707,243 @@
     stamp.textContent = "TestNet only · last-round " + f.last_round + " · " + when + " · chain is source of truth.";
   }
 
-  // Per-second tick: advance the round display and refresh ETA countdowns.
+  /* ---- fleet status rendering ---- */
+  // Live countdown elements re-evaluated every second by tickSecond().
+  let fleetTickers = [];
+
+  function fleetRows(key, st, rows, round) {
+    if (key === "plod" || key === "waddle") {
+      const keeperKey = key === "plod" ? "keeper_app" : "keeper_id";
+      const calls = stateUint(st, "calls");
+      const lastRound = stateUint(st, "last_round");
+      const keeperApp = stateUint(st, keeperKey);
+      rows.appendChild(kvRow("CALLS", calls != null ? String(calls) : "—",
+        calls != null ? "calls u64" : "calls key not set yet (created on first execution)"));
+      rows.appendChild(kvRow("LAST ROUND", lastRound != null ? String(lastRound) : "—",
+        lastRound != null ? "last_round u64" : "last_round key not set yet"));
+      rows.appendChild(kvRow("KEEPER", keeperApp != null ? String(keeperApp) : "—",
+        keeperKey + " u64 · the Arcron keeper app this contract is serviced through"));
+      return;
+    }
+    if (key === "beacon") {
+      const reveals = stateUint(st, "reveals");
+      const revealedRound = stateUint(st, "revealed_round");
+      const targetRound = stateUint(st, "target_round");
+      const delay = stateUint(st, "delay_rounds");
+      rows.appendChild(kvRow("REVEALS", reveals != null ? String(reveals) : "—", "reveals u64 · seeds revealed so far"));
+      const phase = beaconPhase(st, round);
+      const tag = statusTag(phase);
+      const sub = document.createElement("span");
+      sub.className = "tiny";
+      sub.textContent = phase.sub;
+      const cell = document.createElement("span");
+      cell.append(tag, " ", sub);
+      rows.appendChild(kvRow("PHASE", cell));
+      fleetTickers.push({ kind: "beacon", st, tag, sub });
+      rows.appendChild(kvRow("TARGET ROUND", targetRound != null ? String(targetRound) : "—", "target_round u64 · reveal valid once this round passes"));
+      rows.appendChild(kvRow("REVEALED ROUND", revealedRound != null ? String(revealedRound) : "—", "revealed_round u64 · round of the last reveal"));
+      rows.appendChild(kvRow("DELAY", delay != null ? intervalLabel(delay) : "—", "delay_rounds u64" + (delay != null ? " = " + delay + " rounds" : "")));
+      return;
+    }
+    if (key === "epitaph") {
+      const state = epitaphState(st, round);
+      const tag = statusTag(state);
+      const sub = document.createElement("span");
+      sub.className = "tiny";
+      sub.textContent = state.sub;
+      const cell = document.createElement("span");
+      cell.append(tag, " ", sub);
+      rows.appendChild(kvRow("STATE", cell));
+      fleetTickers.push({ kind: "epitaph", st, tag, sub });
+      const checkin = stateUint(st, "last_checkin_round");
+      const timeout = stateUint(st, "timeout_rounds");
+      rows.appendChild(kvRow("LAST CHECK-IN", checkin != null ? String(checkin) : "—", "last_checkin_round u64"));
+      rows.appendChild(kvRow("TIMEOUT", timeout != null ? intervalLabel(timeout) : "—", "timeout_rounds u64" + (timeout != null ? " = " + timeout + " rounds" : "")));
+      rows.appendChild(kvRow("PUBLISHED", (stateUint(st, "published") || 0) ? "YES" : "NO", "published u64 flag"));
+    }
+  }
+
+  function renderFleetStatus(ff) {
+    const wrap = document.getElementById("fleet-status");
+    const empty = document.getElementById("fleet-status-empty");
+    const note = document.getElementById("fleet-status-note");
+    wrap.replaceChildren();
+    fleetTickers = [];
+    if (!ff) {
+      empty.classList.remove("hidden");
+      note.textContent = "feed down";
+      return;
+    }
+    empty.classList.add("hidden");
+    const round = feedRound(ff);
+    note.textContent = (ff.mode === "live" ? "live indexer" : "snapshot") + " · global state per app" + (round != null ? " · round " + round : "");
+
+    FLEET_APPS.forEach((f) => {
+      const st = ff.entries[f.key] || {};
+      const card = document.createElement("div");
+      card.className = "status-card";
+
+      const head = document.createElement("div");
+      head.className = "status-head";
+      const nm = document.createElement("a");
+      nm.className = "status-name";
+      nm.href = f.repo;
+      nm.textContent = f.name;
+      const link = document.createElement("a");
+      link.className = "tiny";
+      link.href = EXPLORER + f.id;
+      link.textContent = "app " + f.id;
+      head.append(nm, link);
+      card.appendChild(head);
+
+      const rows = document.createElement("div");
+      rows.className = "status-rows";
+      fleetRows(f.key, st, rows, round);
+      card.appendChild(rows);
+      wrap.appendChild(card);
+    });
+  }
+
+  /* ---- pulse rendering ---- */
+  let pulseTickers = [];
+
+  function pulseKeys(state) {
+    const keys = Object.keys(state);
+    const known = PULSE_KNOWN.filter((k) => keys.includes(k));
+    const rest = keys.filter((k) => !PULSE_KNOWN.includes(k)).sort();
+    return known.concat(rest);
+  }
+
+  function renderPulse(pf) {
+    const board = document.getElementById("pulse-board");
+    const empty = document.getElementById("pulse-empty");
+    const note = document.getElementById("pulse-note");
+    board.replaceChildren();
+    pulseTickers = [];
+    if (!pf || !pf.state || !Object.keys(pf.state).length) {
+      empty.classList.remove("hidden");
+      empty.textContent = pf ? "pulse app has no global state yet" : "pulse feed down";
+      note.textContent = pf ? pf.mode : "feed down";
+      return;
+    }
+    empty.classList.add("hidden");
+    const round = feedRound(pf);
+    note.textContent = "app " + PULSE + " · " + (pf.mode === "live" ? "live indexer" : "snapshot") +
+      (round != null ? " · round " + round : "");
+
+    pulseKeys(pf.state).forEach((key) => {
+      const e = pf.state[key];
+      const row = document.createElement("div");
+      row.className = "kv-row pulse-row";
+
+      const k = document.createElement("span");
+      k.className = "kv-k";
+      k.textContent = key;
+
+      const v = document.createElement("span");
+      v.className = "kv-v crt-num";
+
+      if (key === "beats" && e.type === "uint") {
+        v.appendChild(flaps(String(e.uint), "22px"));
+        v.title = "beats u64 · total pulses emitted";
+      } else if (key === "last_beat_round" && e.type === "uint") {
+        const ago = document.createElement("span");
+        ago.textContent = round != null ? String(e.uint) + " (" + Math.max(0, round - e.uint) + "r ago)" : String(e.uint);
+        v.appendChild(ago);
+        v.title = "last_beat_round u64";
+        pulseTickers.push({ el: ago, at: e.uint });
+      } else if (key === "last_note" && e.type === "bytes" && e.text != null) {
+        v.textContent = "“" + e.text + "”";
+        v.title = "last_note bytes · 0x" + e.hex;
+      } else if (e.type === "uint") {
+        v.textContent = String(e.uint);
+        v.title = "unrecognized uint key · raw value";
+      } else {
+        v.textContent = "0x" + e.hex;
+        v.title = "unrecognized bytes key · raw hex";
+      }
+
+      row.append(k, v);
+      board.appendChild(row);
+    });
+  }
+
+  /* ---- rain rendering ---- */
+  let rainTickers = [];
+
+  function renderRain(rf) {
+    const board = document.getElementById("rain-board");
+    const empty = document.getElementById("rain-empty");
+    const note = document.getElementById("rain-hub-note");
+    board.replaceChildren();
+    rainTickers = [];
+    if (!rf || !rf.rains || !rf.rains.length) {
+      empty.classList.remove("hidden");
+      empty.textContent = rf ? "No rain records on hub 770130162." : "rain feed down";
+      note.textContent = rf ? rf.mode + " · no records" : "feed down";
+      return;
+    }
+    empty.classList.add("hidden");
+    const hub = rf.hub || {};
+    const round = feedRound(rf);
+    const parts = [];
+    const nextRainId = stateUint(hub, "next_rain_id");
+    const cursor = stateUint(hub, "cursor");
+    if (nextRainId != null) parts.push("next_rain_id " + nextRainId);
+    if (cursor != null) parts.push("cursor " + cursor);
+    if (round != null) parts.push("round " + round);
+    parts.push(rf.mode === "live" ? "live" : "snapshot");
+    note.textContent = parts.join(" · ");
+
+    rf.rains.forEach((r) => {
+      const row = document.createElement("div");
+      row.className = "rain-row";
+      row.setAttribute("role", "row");
+
+      const rid = document.createElement("div");
+      rid.appendChild(flaps("R" + String(r.id).padStart(2, "0"), "18px"));
+
+      const name = document.createElement("div");
+      name.appendChild(flaps(String(r.name).slice(0, 16).toUpperCase(), "15px"));
+
+      const mode = document.createElement("div");
+      mode.className = "tiny";
+      mode.title = "mode u64 at r-box offset 160 · 0 SPLIT · 1 ONE · 2 WAVE";
+      mode.textContent = rainModeLabel(r.mode);
+
+      const pot = document.createElement("div");
+      pot.className = "crt-num";
+      pot.title = "pot u64 at offset 128 = " + r.pot + " µ units" +
+        (r.prize_asset ? " of ASA " + r.prize_asset : " (ALGO)") + " · drip " + r.drip + " µ every " + r.interval_rounds + "r";
+      pot.textContent = r.prize_asset ? r.pot + " ASA" : algo(r.pot) + " A";
+
+      const tickets = document.createElement("div");
+      tickets.className = "crt-num";
+      tickets.title = "tickets u64 at offset 136 · draw_id " + r.draw_id;
+      tickets.textContent = String(r.tickets);
+
+      const due = r.last_rain_round + r.interval_rounds;
+      const next = document.createElement("div");
+      next.className = "crt-num";
+      next.title = "last_rain_round " + r.last_rain_round + " (offset 120) + interval " + r.interval_rounds +
+        (round != null && round >= due ? " · due now" : "");
+      next.textContent = String(due);
+
+      const w = rainWindow(r, round);
+      const win = document.createElement("div");
+      const tag = statusTag(w);
+      const wsub = document.createElement("div");
+      wsub.className = "tiny rain-win-sub";
+      wsub.textContent = w.sub;
+      win.append(tag, wsub);
+      rainTickers.push({ tag, sub: wsub, r });
+
+      row.append(rid, name, mode, pot, tickets, next, win);
+      board.appendChild(row);
+    });
+  }
+
+  // Per-second tick: advance the round display and refresh countdowns.
   function tickSecond() {
     if (!frame) return;
     const round = estimatedRound();
@@ -382,6 +957,27 @@
       document.getElementById("t-soonest-eta").textContent =
         "upkeep " + soon.id + " → " + appName(soon.target_app) + " · ETA " + etaLabel(soon.next_round - round);
     }
+    fleetTickers.forEach((t) => {
+      const w = t.kind === "beacon" ? beaconPhase(t.st, round) : epitaphState(t.st, round);
+      if (t.tag.textContent !== w.text) {
+        t.tag.textContent = w.text;
+        t.tag.className = "status-tag " + w.cls;
+        t.tag.title = w.title || "";
+      }
+      t.sub.textContent = w.sub;
+    });
+    pulseTickers.forEach((t) => {
+      t.el.textContent = String(t.at) + " (" + Math.max(0, round - t.at) + "r ago)";
+    });
+    rainTickers.forEach((t) => {
+      const w = rainWindow(t.r, round);
+      if (t.tag.textContent !== w.text) {
+        t.tag.textContent = w.text;
+        t.tag.className = "status-tag " + w.cls;
+        t.tag.title = w.title || "";
+      }
+      t.sub.textContent = w.sub;
+    });
   }
 
   async function tick() {
@@ -398,7 +994,55 @@
     }
   }
 
+  async function tickFleet() {
+    try {
+      renderFleetStatus(await fetchFleetLive());
+    } catch (err) {
+      console.warn("live fleet fetch failed, trying snapshot", err);
+      try {
+        renderFleetStatus(await fetchFleetSnapshot());
+      } catch (err2) {
+        console.warn("fleet snapshot failed", err2);
+        renderFleetStatus(null);
+      }
+    }
+  }
+
+  async function tickPulse() {
+    try {
+      renderPulse(await fetchPulseLive());
+    } catch (err) {
+      console.warn("live pulse fetch failed, trying snapshot", err);
+      try {
+        renderPulse(await fetchPulseSnapshot());
+      } catch (err2) {
+        console.warn("pulse snapshot failed", err2);
+        renderPulse(null);
+      }
+    }
+  }
+
+  async function tickRain() {
+    try {
+      renderRain(await fetchRainLive());
+    } catch (err) {
+      console.warn("live rain fetch failed, trying snapshot", err);
+      try {
+        renderRain(await fetchRainSnapshot());
+      } catch (err2) {
+        console.warn("rain snapshot failed", err2);
+        renderRain(null);
+      }
+    }
+  }
+
   tick();
+  tickFleet();
+  tickPulse();
+  tickRain();
   setInterval(tick, REFRESH_MS);
+  setInterval(tickFleet, REFRESH_MS);
+  setInterval(tickPulse, REFRESH_MS);
+  setInterval(tickRain, REFRESH_MS);
   setInterval(tickSecond, 1000);
 })();
