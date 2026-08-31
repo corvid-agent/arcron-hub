@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-31T03:51:19Z",
-  "last_round": 66836489,
+  "generated_at": "2026-08-31T13:48:50Z",
+  "last_round": 66849799,
   "keeper_app": 769891898,
   "upkeeps": [
     {
@@ -8,9 +8,9 @@
       "creator": "E5M2OH5XNDMNABJ6VOFOUVR2IKRPCGQH43PVC5P3DWQQ2LV2VJV2FJZQ3E",
       "target_app": 769891902,
       "interval": 15428,
-      "next_round": 66839293,
+      "next_round": 66854721,
       "fee": 4000,
-      "balance": 328578,
+      "balance": 324578,
       "policy": 0
     },
     {
@@ -18,9 +18,9 @@
       "creator": "E5M2OH5XNDMNABJ6VOFOUVR2IKRPCGQH43PVC5P3DWQQ2LV2VJV2FJZQ3E",
       "target_app": 769891902,
       "interval": 15428,
-      "next_round": 66839296,
+      "next_round": 66854724,
       "fee": 4000,
-      "balance": 328578,
+      "balance": 324578,
       "policy": 1
     },
     {
@@ -28,9 +28,9 @@
       "creator": "E5M2OH5XNDMNABJ6VOFOUVR2IKRPCGQH43PVC5P3DWQQ2LV2VJV2FJZQ3E",
       "target_app": 769891902,
       "interval": 15428,
-      "next_round": 66839299,
+      "next_round": 66854727,
       "fee": 4000,
-      "balance": 374114,
+      "balance": 370114,
       "policy": 1
     },
     {
@@ -38,9 +38,9 @@
       "creator": "E5M2OH5XNDMNABJ6VOFOUVR2IKRPCGQH43PVC5P3DWQQ2LV2VJV2FJZQ3E",
       "target_app": 769891902,
       "interval": 15428,
-      "next_round": 66839302,
+      "next_round": 66854730,
       "fee": 4000,
-      "balance": 328578,
+      "balance": 324578,
       "policy": 1
     },
     {
@@ -48,9 +48,9 @@
       "creator": "A3OZPORJYG6ZC6TCPXVNQPGQ4OLE22RSLXPCYRL3XD2FEX7MZTJI4DJZFI",
       "target_app": 770041460,
       "interval": 1286,
-      "next_round": 66837204,
+      "next_round": 66850064,
       "fee": 10000,
-      "balance": 4010000,
+      "balance": 3920000,
       "policy": 1
     },
     {
@@ -58,9 +58,9 @@
       "creator": "E5M2OH5XNDMNABJ6VOFOUVR2IKRPCGQH43PVC5P3DWQQ2LV2VJV2FJZQ3E",
       "target_app": 769891902,
       "interval": 1286,
-      "next_round": 66837458,
+      "next_round": 66850318,
       "fee": 10000,
-      "balance": 7450000,
+      "balance": 7347740,
       "policy": 1
     },
     {
@@ -68,9 +68,9 @@
       "creator": "5HNYJR5HR34WVV6ULOZFX37FHB4M7QBMDW3FZ474XYAAXPQ3GDAJUMYXBY",
       "target_app": 770081902,
       "interval": 1286,
-      "next_round": 66837064,
+      "next_round": 66848638,
       "fee": 10000,
-      "balance": 7449993,
+      "balance": 7354550,
       "policy": 1
     },
     {
@@ -78,9 +78,9 @@
       "creator": "A3OZPORJYG6ZC6TCPXVNQPGQ4OLE22RSLXPCYRL3XD2FEX7MZTJI4DJZFI",
       "target_app": 770081916,
       "interval": 1286,
-      "next_round": 66837073,
+      "next_round": 66849933,
       "fee": 10000,
-      "balance": 5435498,
+      "balance": 5327871,
       "policy": 1
     },
     {
@@ -88,9 +88,9 @@
       "creator": "TIXBOQYGLGI6X2JTE4ZNJ52SIAJT2OIN4AHKHZAIYASACAMI4AGMMHMMJE",
       "target_app": 770081921,
       "interval": 1286,
-      "next_round": 66837079,
+      "next_round": 66849939,
       "fee": 10000,
-      "balance": 5450878,
+      "balance": 5347217,
       "policy": 1
     },
     {
@@ -98,9 +98,9 @@
       "creator": "2Z3UZR2LDNT3F6A6W7G3O4X5ISJGDEFCIRUKBTBE4HE6MJP7APSEQR6Y3E",
       "target_app": 770124734,
       "interval": 1286,
-      "next_round": 66837279,
+      "next_round": 66850139,
       "fee": 4000,
-      "balance": 2980000,
+      "balance": 2940000,
       "policy": 1
     },
     {
@@ -108,9 +108,9 @@
       "creator": "E5M2OH5XNDMNABJ6VOFOUVR2IKRPCGQH43PVC5P3DWQQ2LV2VJV2FJZQ3E",
       "target_app": 770130162,
       "interval": 1286,
-      "next_round": 66836825,
+      "next_round": 66850971,
       "fee": 4000,
-      "balance": 2980000,
+      "balance": 2936000,
       "policy": 1
     },
     {
@@ -118,9 +118,9 @@
       "creator": "TIXBOQYGLGI6X2JTE4ZNJ52SIAJT2OIN4AHKHZAIYASACAMI4AGMMHMMJE",
       "target_app": 770081921,
       "interval": 1286,
-      "next_round": 66836971,
+      "next_round": 66849831,
       "fee": 4000,
-      "balance": 2980000,
+      "balance": 2944000,
       "policy": 1
     },
     {
@@ -128,9 +128,9 @@
       "creator": "A3OZPORJYG6ZC6TCPXVNQPGQ4OLE22RSLXPCYRL3XD2FEX7MZTJI4DJZFI",
       "target_app": 770081916,
       "interval": 1286,
-      "next_round": 66837016,
+      "next_round": 66849876,
       "fee": 10000,
-      "balance": 7450000,
+      "balance": 7347508,
       "policy": 1
     },
     {
@@ -138,9 +138,9 @@
       "creator": "A3OZPORJYG6ZC6TCPXVNQPGQ4OLE22RSLXPCYRL3XD2FEX7MZTJI4DJZFI",
       "target_app": 770081916,
       "interval": 1286,
-      "next_round": 66837019,
+      "next_round": 66849879,
       "fee": 10000,
-      "balance": 7450000,
+      "balance": 7347531,
       "policy": 1
     },
     {
@@ -288,10 +288,224 @@
       "creator": "CEPY52VZRWFLQCJZXQRVQFOPMNAD6M4HCDP4XWKVFXRONJTC6KJVWRCXJI",
       "target_app": 770742777,
       "interval": 1700,
-      "next_round": 66837237,
+      "next_round": 66850837,
       "fee": 4000,
-      "balance": 500000,
+      "balance": 468000,
+      "policy": 1
+    },
+    {
+      "id": 113,
+      "creator": "E5M2OH5XNDMNABJ6VOFOUVR2IKRPCGQH43PVC5P3DWQQ2LV2VJV2FJZQ3E",
+      "target_app": 770746178,
+      "interval": 1286,
+      "next_round": 66850313,
+      "fee": 4000,
+      "balance": 44000,
+      "policy": 1
+    },
+    {
+      "id": 114,
+      "creator": "CEPY52VZRWFLQCJZXQRVQFOPMNAD6M4HCDP4XWKVFXRONJTC6KJVWRCXJI",
+      "target_app": 770748282,
+      "interval": 7200,
+      "next_round": 66853144,
+      "fee": 4000,
+      "balance": 496000,
       "policy": 1
     }
-  ]
+  ],
+  "fleet": {
+    "plod": {
+      "last_round": {
+        "type": "uint",
+        "uint": 0
+      },
+      "calls": {
+        "type": "uint",
+        "uint": 0
+      },
+      "keeper_app": {
+        "type": "uint",
+        "uint": 769891898
+      },
+      "last_caller": {
+        "type": "bytes",
+        "hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "text": null
+      }
+    },
+    "waddle": {
+      "keeper_id": {
+        "type": "uint",
+        "uint": 769891898
+      }
+    },
+    "beacon": {
+      "reveals": {
+        "type": "uint",
+        "uint": 3
+      },
+      "delay_rounds": {
+        "type": "uint",
+        "uint": 800
+      },
+      "keeper_app": {
+        "type": "uint",
+        "uint": 769891898
+      },
+      "target_round": {
+        "type": "uint",
+        "uint": 66850072
+      },
+      "revealed_seed": {
+        "type": "bytes",
+        "hex": "2b8080e0c2737044bcd9366c9bfb7cceb07b7d06d560bdeb0c2eaf78f0ed719e",
+        "text": null
+      },
+      "revealed_round": {
+        "type": "uint",
+        "uint": 66846653
+      }
+    },
+    "epitaph": {
+      "keeper_app": {
+        "type": "uint",
+        "uint": 769891898
+      },
+      "revealed_round": {
+        "type": "uint",
+        "uint": 0
+      },
+      "timeout_rounds": {
+        "type": "uint",
+        "uint": 100000
+      },
+      "last_checkin_round": {
+        "type": "uint",
+        "uint": 66838732
+      },
+      "owner": {
+        "type": "bytes",
+        "hex": "111f8eeab98d8ab80939bc235815cf63403f338710dfcbd9552de2e6a662f293",
+        "text": null
+      },
+      "published": {
+        "type": "uint",
+        "uint": 0
+      },
+      "commitment": {
+        "type": "bytes",
+        "hex": "70fdee93ad0046ccb2caf66fd30e4a23770c19c1edae6360892f4a542a36a346",
+        "text": null
+      }
+    }
+  },
+  "pulse": {
+    "beats": {
+      "type": "uint",
+      "uint": 270
+    },
+    "last_note": {
+      "type": "bytes",
+      "hex": "617263726f6e",
+      "text": "arcron"
+    },
+    "last_beat_round": {
+      "type": "uint",
+      "uint": 66849052
+    }
+  },
+  "rain": {
+    "hub": {
+      "cursor": {
+        "type": "uint",
+        "uint": 1
+      },
+      "bootstrapped": {
+        "type": "uint",
+        "uint": 1
+      },
+      "next_rain_id": {
+        "type": "uint",
+        "uint": 5
+      }
+    },
+    "rains": [
+      {
+        "id": 1,
+        "name": "Corvid daily",
+        "prize_asset": 0,
+        "drip": 50000,
+        "interval_rounds": 30857,
+        "last_rain_round": 66827958,
+        "pot": 850000,
+        "tickets": 1,
+        "draw_id": 2,
+        "mode": 0,
+        "wave_cap": 0,
+        "commit_round": 0,
+        "prize_locked": 0
+      },
+      {
+        "id": 2,
+        "name": "Corvid GM",
+        "prize_asset": 0,
+        "drip": 50000,
+        "interval_rounds": 30857,
+        "last_rain_round": 66793135,
+        "pot": 950000,
+        "tickets": 1,
+        "draw_id": 1,
+        "mode": 2,
+        "wave_cap": 10,
+        "commit_round": 0,
+        "prize_locked": 0
+      },
+      {
+        "id": 3,
+        "name": "live ALGO one",
+        "prize_asset": 0,
+        "drip": 50000,
+        "interval_rounds": 10,
+        "last_rain_round": 66831686,
+        "pot": 200000,
+        "tickets": 3,
+        "draw_id": 7,
+        "mode": 1,
+        "wave_cap": 0,
+        "commit_round": 66831694,
+        "prize_locked": 50000
+      },
+      {
+        "id": 4,
+        "name": "live ASA split",
+        "prize_asset": 770131837,
+        "drip": 1000,
+        "interval_rounds": 10,
+        "last_rain_round": 66793135,
+        "pot": 0,
+        "tickets": 1,
+        "draw_id": 5,
+        "mode": 0,
+        "wave_cap": 0,
+        "commit_round": 0,
+        "prize_locked": 0
+      },
+      {
+        "id": 5,
+        "name": "swarm audit split",
+        "prize_asset": 0,
+        "drip": 10000,
+        "interval_rounds": 30,
+        "last_rain_round": 66807253,
+        "pot": 0,
+        "tickets": 2,
+        "draw_id": 5,
+        "mode": 0,
+        "wave_cap": 0,
+        "commit_round": 0,
+        "prize_locked": 0
+      }
+    ]
+  }
 }
