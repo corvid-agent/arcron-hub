@@ -1,1 +1,156 @@
-placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ARCRON HUB · Algorand TestNet</title>
+  <meta name="description" content="Live network observer and onboarding hub for Arcron, the permissionless keeper network on Algorand TestNet. Read-only. No wallet.">
+  <meta name="theme-color" content="#070806">
+  <meta property="og:title" content="ARCRON HUB · Algorand TestNet">
+  <meta property="og:description" content="Live observer + onboarding hub for the Arcron keeper network. Anyone registers. Anyone executes. Losers pay nothing.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="hall">
+    <div class="tape" aria-hidden="true">
+      <span>PERMISSIONLESS KEEPER NETWORK</span><span>ALGORAND TESTNET</span><span>NO WALLET</span><span>LOSERS PAY NOTHING</span>
+      <span>PERMISSIONLESS KEEPER NETWORK</span><span>ALGORAND TESTNET</span><span>NO WALLET</span><span>LOSERS PAY NOTHING</span>
+    </div>
+
+    <div id="snap-banner" class="snap-banner hidden" role="status">
+      SNAPSHOT as-of round <span id="snap-round">—</span> · live feed unreachable · chain is source of truth
+    </div>
+
+    <header class="lintel">
+      <div class="lintel-left">
+        <p class="station">GATE ARC</p>
+        <p class="substation">Algorand TestNet · keeper <a href="https://testnet.explorer.perawallet.app/application/769891898">769891898</a></p>
+      </div>
+      <h1 class="mast">ARCRON HUB</h1>
+      <div class="lintel-right">
+        <div class="crt-clock" title="Algod last-round · ~2.8s per round">
+          <div class="crt-label">CURRENT ROUND</div>
+          <div class="crt-digits" id="round-digits">········</div>
+          <div class="crt-scan" aria-hidden="true"></div>
+        </div>
+        <div class="net-status">
+          <span id="feed-mode" class="mode unknown">SEEKING</span>
+          <span id="feed-note" class="note">prefer live algod · snapshot if fetch fails</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="totals" aria-label="Network totals">
+      <div class="stat">
+        <div class="stat-label">UPKEEPS REGISTERED</div>
+        <div class="stat-value" id="t-count">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">ALGO ESCROWED</div>
+        <div class="stat-value" id="t-escrow">—</div>
+      </div>
+      <div class="stat wide">
+        <div class="stat-label">SOONEST EXECUTION</div>
+        <div class="stat-value" id="t-soonest">—</div>
+        <div class="stat-sub crt-num" id="t-soonest-eta">—</div>
+      </div>
+    </section>
+
+    <main class="housing" id="board-housing">
+      <div class="screws" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="housing-title">
+        <span class="housing-mast">UPKEEP BOARD</span>
+        <span class="tiny">every registered upkeep on keeper 769891898 · sorted by next execution</span>
+      </div>
+      <div class="board-head" aria-hidden="true">
+        <span class="col">ID</span>
+        <span class="col">TARGET APP</span>
+        <span class="col">CREATOR</span>
+        <span class="col">INTERVAL</span>
+        <span class="col">NEXT ROUND</span>
+        <span class="col">ETA</span>
+        <span class="col">FEE</span>
+        <span class="col">BALANCE</span>
+        <span class="col">POLICY</span>
+      </div>
+      <div id="board" class="board" role="table" aria-label="Registered upkeeps"></div>
+      <p id="empty" class="hidden empty">No upkeeps on keeper 769891898.</p>
+      <p class="rule">POLICY: SKIP AHEAD jumps to the next future interval (healthy) · CATCH UP replays every missed interval (the trap — one due upkeep can demand many back-to-back executions) · fee/balance in µALGO</p>
+    </main>
+
+    <section class="fleet" aria-label="corvid-agent fleet">
+      <div class="fleet-title">
+        <span class="housing-mast">THE FLEET</span>
+        <span class="tiny">corvid-agent apps, kept alive by Arcron upkeeps</span>
+      </div>
+      <div class="fleet-cards">
+        <a class="fleet-card" href="https://github.com/corvid-agent/plod">
+          <div class="fleet-name">PLOD</div>
+          <div class="fleet-desc">weekly cadence drumbeat</div>
+          <div class="fleet-meta">app <span class="crt-num">770734249</span> · upkeep 110 · every 224000r</div>
+        </a>
+        <a class="fleet-card" href="https://github.com/corvid-agent/waddle">
+          <div class="fleet-name">WADDLE</div>
+          <div class="fleet-desc">slow deliberate walker</div>
+          <div class="fleet-meta">app <span class="crt-num">770742373</span> · upkeep 111 · every 30857r</div>
+        </a>
+        <a class="fleet-card" href="https://github.com/corvid-agent/arcron-beacon">
+          <div class="fleet-name">ARCRON-BEACON</div>
+          <div class="fleet-desc">network liveness beacon</div>
+          <div class="fleet-meta">app <span class="crt-num">770742777</span> · upkeep 112 · every 1700r</div>
+        </a>
+      </div>
+    </section>
+
+    <section class="explainer housing" aria-label="What is Arcron">
+      <div class="screws" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="housing-title">
+        <span class="housing-mast">WHAT IS ARCRON</span>
+        <span class="tiny">cron, but the chain is the clock and the crowd is the crontab</span>
+      </div>
+      <div class="explainer-body">
+        <p>
+          <strong>Arcron is a permissionless keeper network on Algorand.</strong>
+          Anyone registers a recurring upkeep: a target application call, an interval in
+          rounds, and a fee escrow. When the upkeep falls due, <em>any</em> keeper on the
+          network may execute it and claim the fee from escrow. Keepers race; the winner
+          is paid, <strong>losers pay nothing</strong> beyond their own (refunded-safe,
+          fee-covered) transaction cost. No allowlists, no operator keys, no gatekeepers.
+        </p>
+        <p>
+          Everything on the board above is decoded straight from on-chain box storage on
+          keeper app <a href="https://testnet.explorer.perawallet.app/application/769891898">769891898</a>.
+          The page is read-only: it never asks for a wallet, and the chain — not this
+          page — is the source of truth.
+        </p>
+        <div class="onboard">
+          <a class="onboard-link" href="https://github.com/CorvidLabs/arcron">CorvidLabs/arcron <span class="tiny">contracts + protocol</span></a>
+          <a class="onboard-link" href="https://github.com/corvid-agent/field-guide">corvid-agent/field-guide <span class="tiny">onboarding guide</span></a>
+          <a class="onboard-link" href="https://github.com/corvid-agent/arrivals">corvid-agent/arrivals <span class="tiny">keeper board</span></a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="apron">
+      <p>
+        TestNet only. Arcron is unaudited experimental software; nothing here is financial
+        advice and no value on TestNet is real. Read-only observer — no wallet, no keys.
+      </p>
+      <p>
+        Generated by <a href="https://github.com/corvid-agent">corvid-agent</a> ·
+        source <a href="https://github.com/corvid-agent/arcron-hub">github.com/corvid-agent/arcron-hub</a> ·
+        refresh 30s.
+      </p>
+      <p class="fine" id="stamp">seeking chain…</p>
+    </footer>
+  </div>
+  <noscript>
+    <p class="noscript">This hub needs JavaScript to read TestNet boxes. A static snapshot lives in snapshot.json.</p>
+  </noscript>
+  <script src="app.js"></script>
+</body>
+</html>
