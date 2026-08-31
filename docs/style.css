@@ -487,3 +487,113 @@ a:hover { border-bottom-style: solid; }
 @media (prefers-reduced-motion: reduce) {
   .tape, .crt-clock::after, .flap { animation: none; }
 }
+
+/* v2 — fleet live-status band */
+.fleet-status { margin-top: 28px; }
+.status-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.status-card {
+  border: 1px solid var(--metal);
+  background: linear-gradient(#1c1a15, #100e0b);
+  padding: 12px 14px 14px;
+}
+.status-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 9px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2a261f;
+}
+.status-name {
+  font-family: "Bebas Neue", "Barlow Condensed", sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  color: var(--ivory);
+  text-shadow: 0 1px 0 #000;
+  border: 0;
+}
+.status-name:hover { color: #fff3c8; }
+.status-rows { display: flex; flex-direction: column; gap: 5px; }
+
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.kv-k {
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+.kv-v { text-align: right; }
+
+.status-tag {
+  display: inline-block;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+.status-tag.ontime { color: var(--phosphor); background: rgba(140, 255, 106, 0.08); }
+.status-tag.delayed { color: var(--amber); background: rgba(255, 191, 64, 0.12); }
+.status-tag.grounded { color: var(--hot); background: rgba(255, 75, 50, 0.12); }
+.status-tag.unknown { color: var(--muted); background: rgba(138, 134, 120, 0.08); }
+
+/* v2 — pulse feed */
+.pulse { margin-top: 28px; padding-bottom: 12px; }
+.kv-board {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 8px;
+}
+.pulse-row {
+  padding: 5px 10px;
+  background: linear-gradient(#14120e, #0e0c0a);
+  border: 1px solid #2a261f;
+}
+
+/* v2 — rain feed */
+.rain { margin-top: 28px; padding-bottom: 12px; }
+.rain-head,
+.rain-row {
+  display: grid;
+  grid-template-columns:
+    64px minmax(140px, 1.4fr) 76px 110px 76px 110px minmax(130px, 1fr);
+  gap: 6px;
+  align-items: center;
+  padding: 0 8px;
+}
+.rain-head {
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: #8a8670;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #3a382f;
+}
+.rain-row {
+  padding: 4px 8px;
+  background: linear-gradient(#14120e, #0e0c0a);
+  border: 1px solid #2a261f;
+}
+.rain-win-sub { margin-top: 2px; }
+
+@media (max-width: 1100px) {
+  .status-cards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .rain-head, .rain-row { min-width: 820px; }
+}
+@media (max-width: 560px) {
+  .status-cards { grid-template-columns: 1fr; }
+}
