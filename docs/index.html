@@ -82,6 +82,46 @@
       <p class="rule">POLICY: SKIP AHEAD jumps to the next future interval (healthy) · CATCH UP replays every missed interval (the trap — one due upkeep can demand many back-to-back executions) · fee/balance in µALGO</p>
     </main>
 
+    <section class="fleet-status" aria-label="Fleet live status">
+      <div class="fleet-title">
+        <span class="housing-mast">FLEET STATUS</span>
+        <span class="tiny" id="fleet-status-note">live global state from each corvid-agent app</span>
+      </div>
+      <div class="status-cards" id="fleet-status"></div>
+      <p id="fleet-status-empty" class="hidden empty">Fleet status feed down.</p>
+    </section>
+
+    <section class="pulse housing" aria-label="Arcron pulse feed">
+      <div class="screws" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="housing-title">
+        <span class="housing-mast">PULSE FEED</span>
+        <span class="tiny" id="pulse-note">app 769891902 “arcron pulse” · global state, keys discovered live</span>
+      </div>
+      <div id="pulse-board" class="kv-board"></div>
+      <p id="pulse-empty" class="hidden empty">Pulse feed down.</p>
+      <p class="rule">Global-state entries are base64 key/value pairs (uint type=2, bytes type=1) read from the indexer. Recognized keys get friendly rendering; anything unknown shows raw hex.</p>
+    </section>
+
+    <section class="rain housing" aria-label="Rain feed">
+      <div class="screws" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="housing-title">
+        <span class="housing-mast">RAIN FEED</span>
+        <span class="tiny" id="rain-hub-note">rain hub 770130162 · RainRec boxes · resolve-window states</span>
+      </div>
+      <div class="rain-head" aria-hidden="true">
+        <span class="col">ID</span>
+        <span class="col">LABEL</span>
+        <span class="col">MODE</span>
+        <span class="col">POT</span>
+        <span class="col">TICKETS</span>
+        <span class="col">NEXT ROUND</span>
+        <span class="col">WINDOW</span>
+      </div>
+      <div id="rain-board" class="board" role="table" aria-label="Rain records"></div>
+      <p id="rain-empty" class="hidden empty">No rain records on hub 770130162.</p>
+      <p class="rule">WINDOW: WAITING DRAW · SEED LOCK (commit + 8r) · RESOLVE (commit + 800r countdown) · MISSED (abandonable) · AUTO-SPLIT / GM WAVE fire with no resolve window · RainRec = 224-byte box “r”||itob(id)</p>
+    </section>
+
     <section class="fleet" aria-label="corvid-agent fleet">
       <div class="fleet-title">
         <span class="housing-mast">THE FLEET</span>
@@ -123,9 +163,10 @@
         </p>
         <p>
           Everything on the board above is decoded straight from on-chain box storage on
-          keeper app <a href="https://testnet.explorer.perawallet.app/application/769891898">769891898</a>.
-          The page is read-only: it never asks for a wallet, and the chain — not this
-          page — is the source of truth.
+          keeper app <a href="https://testnet.explorer.perawallet.app/application/769891898">769891898</a>;
+          the fleet status, pulse feed and rain feed are decoded from live app global
+          state and RainRec boxes. The page is read-only: it never asks for a wallet,
+          and the chain — not this page — is the source of truth.
         </p>
         <div class="onboard">
           <a class="onboard-link" href="https://github.com/CorvidLabs/arcron">CorvidLabs/arcron <span class="tiny">contracts + protocol</span></a>
